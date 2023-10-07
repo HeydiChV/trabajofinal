@@ -1,0 +1,37 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+public class TransaccionService
+{
+    private readonly DataAccessLayer dataAccessLayer;
+
+    public TransaccionService()
+    {
+        dataAccessLayer = DataAccessLayer.Instance;
+    }
+
+    public void RealizarTransaccion(Estudiante estudiante, Nivel nivel)
+    {
+        using (var context = new TuContextoDeDatos())
+        {
+            using (var transaction = context.Database.BeginTransaction())
+            {
+                try
+                {
+                    context.Estudiantes.Add(estudiante);
+                    context.Niveles.Add(nivel);
+                    context.SaveChanges();
+                    transaction.Commit();
+                }
+                catch (Exception)
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+}
