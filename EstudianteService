@@ -1,0 +1,222 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Net;
+using System.Net.Mail;
+using System.IO;
+using System.Diagnostics;
+using System.Security.Cryptography;
+
+public class EstudianteService
+{
+    private readonly DataAccessLayer dataAccessLayer;
+
+    public EstudianteService()
+    {
+        dataAccessLayer = DataAccessLayer.Instance;
+    }
+
+    public IEnumerable<Estudiante> ObtenerEstudiantes()
+    {
+        return dataAccessLayer.GetEstudiantes();
+    }
+
+    public void AgregarEstudiante(Estudiante estudiante)
+    {
+        dataAccessLayer.InsertarEstudiante(estudiante);
+    }
+
+    public void EliminarEstudiante(int estudianteId)
+    {
+        using (var context = new TuContextoDeDatos(connectionString))
+        {
+            var estudianteAEliminar = context.Estudiantes.Find(estudianteId);
+            if (estudianteAEliminar != null)
+            {
+                context.Estudiantes.Remove(estudianteAEliminar);
+                context.SaveChanges();
+            }
+            else
+            {
+                throw new Exception("Estudiante no encontrado.");
+            }
+        }
+    }
+    private readonly DataAccessLayer dataAccessLayer;
+
+    private readonly DataAccessLayer dataAccessLayer;
+    private readonly string correoEmisor = "tu_correo@example.com";
+    private readonly string contraseñaEmisor = "tu_contraseña";
+    private readonly string servidorSmtp = "smtp.example.com";
+
+    public EstudianteService()
+    {
+        dataAccessLayer = DataAccessLayer.Instance;
+    }
+
+    public void EjecutarTareasProgramadas()
+    {
+        Timer timer = new Timer(TimerCallback, null, 0, 60000); // Ejecutar cada minuto (60000 milisegundos).
+    }
+
+    private void TimerCallback(object state)
+    {
+        // Consulta estudiantes y realiza tareas programadas
+        var estudiantes = dataAccessLayer.GetEstudiantes();
+
+        // Tarea 1: Enviar correos electrónicos a los estudiantes
+        Parallel.ForEach(estudiantes, estudiante =>
+        {
+            EnviarCorreoElectronico(estudiante);
+        });
+
+        // Tarea 2: Realizar copias de seguridad de la base de datos (en un hilo separado)
+        Task.Run(() =>
+        {
+            RealizarCopiaDeSeguridad();
+        });
+    }
+
+    private void EnviarCorreoElectronico(Estudiante estudiante)
+    {
+        using (var clienteSmtp = new SmtpClient(servidorSmtp))
+        {
+            clienteSmtp.UseDefaultCredentials = false;
+            clienteSmtp.Credentials = new NetworkCredential(correoEmisor, contraseñaEmisor);
+            clienteSmtp.EnableSsl = true;
+
+            MailMessage mensaje = new MailMessage();
+            mensaje.From = new MailAddress(correoEmisor);
+            mensaje.To.Add(estudiante.CorreoElectronico);
+            mensaje.Subject = "Asunto del Correo";
+            mensaje.Body = "Cuerpo del Correo Electrónico";
+
+            try
+            {
+                clienteSmtp.Send(mensaje);
+                Console.WriteLine($"Correo enviado a {estudiante.CorreoElectronico}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al enviar el correo a {estudiante.CorreoElectronico}: {ex.Message}");
+            }
+        }
+    }
+
+    private void RealizarCopiaDeSeguridad()
+    {
+        // Configura los parámetros para la copia de seguridad
+        string nombreBaseDeDatos = "NombreDeTuBaseDeDatos";
+        string rutaCopiaDeSeguridad = @"C:\Desktop\CRUD_IE\Archivo.bak";
+
+        // Comando SQL para realizar la copia de seguridad
+        string comandoSql = $"BACKUP DATABASE {nombreBaseDeDatos} TO DISK='{rutaCopiaDeSeguridad}'";
+
+        // Configura la información de inicio de sesión de SQL Server
+        string servidor = "NombreDelServidor";
+        string usuario = "TuUsuario";
+        string contraseña = "TuContraseña";
+
+        // Ejecuta el comando SQL usando sqlcmd
+        ProcessStartInfo psi = new ProcessStartInfo
+        {
+            FileName = "sqlcmd",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            WorkingDirectory = @"C:\Desktop\CRUD_IE\SQLCMD"
+        };
+
+        using (Process process = new Process { StartInfo = psi })
+        {
+            process.Start();
+
+            // Inicia sesión en SQL Server y ejecuta el comando SQL
+            StreamWriter sw = process.StandardInput;
+            StreamReader sr = process.StandardOutput;
+            StreamReader err = process.StandardError;
+
+            sw.WriteLine($"-S {servidor} -U {usuario} -P {contraseña}");
+            sw.WriteLine($"USE {nombreBaseDeDatos}");
+            sw.WriteLine(comandoSql);
+            sw.WriteLine("GO");
+            sw.WriteLine("EXIT");
+
+            string output = sr.ReadToEnd();
+            string error = err.ReadToEnd();
+
+            process.WaitForExit();
+
+            // Verifica si hubo errores durante la copia de seguridad
+            if (!string.IsNullOrEmpty(error))
+            {
+                Console.WriteLine($"Error al realizar la copia de seguridad: {error}");
+            }
+            else
+            {
+                Console.WriteLine("Copia de seguridad realizada correctamente.");
+            }
+        }
+    }
+
+    private readonly DataAccessLayer dataAccessLayer;
+
+    public EstudianteService()
+    {
+        dataAccessLayer = DataAccessLayer.Instance;
+    }
+    // ProtegerInformacionEstudiante
+    public class Encryptor
+    {
+        private static readonly string claveDeEncriptacion = "TuClaveSecreta"; // Cambia esto a una clave segura
+
+        public static string Encriptar(string textoPlano)
+        {
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Encoding.UTF8.GetBytes(claveDeEncriptacion);
+                aesAlg.IV = aesAlg.Key;
+
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+                using (MemoryStream msEncrypt = new MemoryStream())
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                        {
+                            swEncrypt.Write(textoPlano);
+                        }
+                    }
+                    return Convert.ToBase64String(msEncrypt.ToArray());
+                }
+            }
+        }
+
+        public static string Desencriptar(string textoEncriptado)
+        {
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Encoding.UTF8.GetBytes(claveDeEncriptacion);
+                aesAlg.IV = aesAlg.Key;
+
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+                using (MemoryStream msDecrypt = new MemoryStream(Convert.FromBase64String(textoEncriptado)))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
+                        {
+                            return srDecrypt.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
