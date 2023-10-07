@@ -1,0 +1,43 @@
+public class DataAccessLayer
+{
+    private static readonly Lazy<DataAccessLayer> instance = new Lazy<DataAccessLayer>(() => new DataAccessLayer());
+    private readonly string connectionString = "tu_cadena_de_conexion_a_SQL_Server";
+
+    private DataAccessLayer() { }
+
+    public static DataAccessLayer Instance => instance.Value;
+
+    public IEnumerable<Estudiante> GetEstudiantes()
+    {
+        using (var context = new TuContextoDeDatos(connectionString))
+        {
+            return context.Estudiantes.ToList();
+        }
+    }
+
+    public void InsertarEstudiante(Estudiante estudiante)
+    {
+        using (var context = new TuContextoDeDatos(connectionString))
+        {
+            context.Estudiantes.Add(estudiante);
+            context.SaveChanges();
+        }
+    }
+
+    public void EliminarEstudiante(int estudianteId)
+    {
+        using (var context = new TuContextoDeDatos(connectionString))
+        {
+            var estudianteAEliminar = context.Estudiantes.Find(estudianteId);
+            if (estudianteAEliminar != null)
+            {
+                context.Estudiantes.Remove(estudianteAEliminar);
+                context.SaveChanges();
+            }
+            else
+            {
+                throw new Exception("Estudiante no encontrado.");
+            }
+        }
+    }
+}
